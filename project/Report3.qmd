@@ -1,0 +1,202 @@
+---
+title: "Addressing Limited Sanitation in Schools"
+subtitle: "With a Focus on Nicaragua"
+author: "Claire Sweeney"
+date: "04-10-2024"
+format: 
+  html: 
+    theme: superhero
+    toc: true
+
+execute: 
+  echo: false
+  warning: false
+  message: false 
+---
+# Introduction 
+
+Limited sanitation in schools is a concept which those in developed countries **don't even consider**. Most have heard of the *UN's Sustainable Development Goals*, with their 6th goal being **Clean Water and Sanitation**. 
+
+<img src="goalsnew.jpeg" width="600" height="170">
+
+In this dashboard, I will delve into this topic by portraying the proportion of schools with limited sanitation in various countries. Further issues which may relate to limited sanitation problems are then discussed. **Nicaragua** is a country of interest for this issue and so is presented in detail. 
+
+```{r}
+#| label: set
+#| include: false
+
+# libraries 
+library(tidyverse)
+library(plotly)
+
+# data
+unicef_indicator_1 <- read_csv("unicef_indicator_1.csv")
+unicef_indicator_2 <- read_csv("unicef_indicator_2.csv")
+unicef_metadata <- read_csv("unicef_metadata.csv")
+
+# transformations
+data_join <- unicef_metadata %>%
+  full_join(unicef_indicator_1, by = c("country", "year")) %>%
+  full_join(unicef_indicator_2,  by = c("country", "year" = "time_period"))
+```
+# Limited Sanitation in Schools Across the World
+```{r}
+#| fig-cap: "This map shows the countries which have the highest proportion of schools with limited sanitation and those which have the lowest. The data available shows many countries' proportion is low, which **hinders the objective of the UN** to ensure all countries have proper sanitation. It is worrying that there are numerous countries in which *20% or more* of schools have limited sanitation. We can see that Nicaragua (in Central America) has one of the highest proportions."
+#| fig-width: 7
+#| fig-height: 4.5
+
+map_world <- map_data("world")
+
+data_join_2020 <- unicef_indicator_1 %>%
+  filter(year == 2020)
+
+map_data_join_2020 <- full_join(data_join_2020, map_world, by = c("country" = "region"))
+
+map <- ggplot(map_data_join_2020) +
+  aes(x = long, y = lat, group = group, fill = obs_value, country = country) +
+  geom_polygon() +
+  labs(title = paste("Proportion of Schools with Limited Sanitation in 2020")) +
+  labs(fill = paste("%")) +
+  labs(y = NULL, x = NULL) +
+  theme(panel.background = element_blank(), 
+        panel.grid.major.y = element_blank(),  
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(), axis.text = element_blank(), axis.ticks = element_blank()) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue", na.value = "#333333")
+
+ggplotly(map)
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 3.5
+
+sanitation_GDP_2020 <- data_join %>%
+  filter(`GDP per capita (constant 2015 US$)` > 0, year == 2020, obs_value.x > 0)
+
+# Calculate linear regression
+lm_model <- lm(obs_value.x ~ `GDP per capita (constant 2015 US$)`, data = sanitation_GDP_2020)
+
+# Create scatter plot
+scatterplot <- ggplot(sanitation_GDP_2020) +
+  aes(x = `GDP per capita (constant 2015 US$)`, y = obs_value.x, country = country) +
+  geom_point(color = "#40E0D0") +
+  theme(legend.position = "none", axis.title.y = element_text(size = 8), axis.title.x = element_text(size = 8)) +
+  # Add linear regression line
+  geom_abline(intercept = coef(lm_model)[1], slope = coef(lm_model)[2], color = "navy") +
+  labs(title = "Limited Sanitation in Schools and GDP") +
+  labs(y = "Proportion of Schools 
+       with Limited Sanitation", x = "GDP per capita") +
+  theme(panel.background = element_blank()) +
+  theme(panel.grid.major.y = element_line("lightgrey"),  
+        panel.grid.minor = element_line("lightgrey"))
+
+ggplotly(scatterplot)
+```
+The scatterplot above shows the *relationship between GDP and limited sanitation in schools* for countries across the world. While the regression line behaves as we would expect, there are a few **outliers which require attention**. The three countries presented with the highest proportion of limited sanitation in schools are:
+
+1. Senegal
+2. Nicaragua
+3. United Republic of Tanzania 
+
+If we view these countries on the map above, I find *Nicaragua* to be of **most interest** as the countries around it have significantly lower proportions. Therefore, I will delve further into Nicaragua's characteristics.
+
+# Life Expectancy Movement For All Countries 
+```{r}
+#| fig-cap: "This time-series shows the life expectancies of all countries in the dataset. This visualisation can be used to *analyse the charts below* by comparing the life expectancy of other countries to Nicaragua."
+#| fig-width: 6
+#| fig-height: 2.5
+
+scatter_world <- unicef_metadata %>%
+  filter(`Life expectancy at birth, total (years)` > 40) %>%
+  ggplot() +
+  aes(year, `Life expectancy at birth, total (years)`, color = country) +
+  geom_line(alpha = 0.5) +
+  labs(x = "Year", y = "Life expectancy", title = "Life Expectancy For All Countries") +
+  theme(legend.position = "none") +
+  theme(panel.background = element_blank()) +
+  theme(panel.grid.major.y = element_line("lightgrey"),  
+        panel.grid.minor = element_line("lightgrey"))
+
+ggplotly(scatter_world)
+```
+# Focusing on Nicaragua 
+
+<img src="nicaragua.flag.png" width="340" height="200">  (Flag of Nicaragua, Adopted in 1908)
+
+To begin the exploration of Nicaragua, I will present some facts which you will likely find astonishing:
+
+- According to World Bank, the population of Nicaragua is *6.625 million* and it is one of the **poorest countries in the Western Hemisphere**. 
+- Nicaragua has long suffered from poor sanitation. In 2018, the country joined **Sanitation and Water For All** (SWA), in hopes of improving the quality of their water nationwide and increasing the provision on proper sanitation. In a 2022 report from SWA, it was stated that *"To ensure 100% safely managed water by 2030, around 12 times faster progress is needed."* 
+- SWA also reported that **less than 50%** of boys and girls complete secondary education. As we delve into limited sanitation in Nicaragua's schools, we must wonder if more young people would receive a **better education with better sanitation** conditions in schools. 
+
+## Life Expectancy
+```{r}
+#| fig-width: 5.5
+#| fig-height: 2.5
+
+metadata_join_2020 <- unicef_metadata %>%
+  filter(year == 2020)
+
+metadata_join_nicaragua <- unicef_metadata %>%
+  filter(country == "Nicaragua")
+
+time_series_nic <- metadata_join_nicaragua %>%
+  ggplot() +
+  aes(year, `Life expectancy at birth, total (years)`) +
+  geom_line(color = "navy") +
+  labs(x = "Year", y = "Life expectancy", title = "Nicaragua's Life Expectancy Since 1960") +
+  theme(legend.position = "none") +
+   theme(panel.background = element_blank()) +
+   theme(panel.grid.major.y = element_line("lightgrey"),  
+        panel.grid.minor = element_line("lightgrey"))
+
+ggplotly(time_series_nic)
+```
+
+```{r}
+#| fig-cap: "Nicaragua's life expectancy has grown significantly over the past 60 years. It is much higher than many countries across the world, however, it is far off the highest life expectancies recorded. This can signify that there are **health or other issues present in the country**. Thus, when also considering the information I presented earlier in the dashboard, it is not surprising that Nicaragua has a high proportion of schools with limited sanitation."
+#| fig-width: 5.5
+#| fig-height: 2.5
+
+time_series_20yrs <- unicef_metadata %>%
+  filter(country == "Nicaragua", year > 2001 & year < 2020) %>%
+  ggplot() +
+  aes(year, `Life expectancy at birth, total (years)`, group = country) +
+  geom_line(color = "#40E0D0") +
+  labs(title = "Nicaragua's Life Expectancy Over 20 years") +
+  labs(y = "life expectancy") +
+  theme(panel.background = element_blank()) +
+   theme(panel.grid.major.y = element_line("lightgrey"),  
+        panel.grid.minor = element_line("lightgrey"))
+
+ggplotly(time_series_20yrs)
+```
+
+## GDP 
+A country's GDP represents a the value added through production of goods and services. According to WorldAtlas, **coffee** is Nicaragua's largest export. The coffee industry is competitive and it is likely Nicaragua's income from these exports is below what they need to raise their GDP. Thus, it may be in the country's best interest to produce *more unique goods and services* for which they have the climate and skills.
+```{r}
+#| fig-cap: "This figure shows the movement in GDP for Nicaragua over 20 years. The **average GDP for countries in 2020**, in the dataset I used for this dashboard,  is ***€11,958***. Nicaragua's GDP is well below this average. Thus, this is another reason why it can be expected for Nicaragua to have a higher proportion of schools with limited sanitation. With a low GDP which has not improved sinificantly over the last decade, it must be questioned if Nicaragua has the resources needed to meet the SWA's goals for the country."
+#| fig-width: 6
+#| fig-height: 3.5
+
+bar_chart <- unicef_metadata %>%
+  filter(country == "Nicaragua", year > 2000 & year < 2020) %>%
+  ggplot(aes(year, `GDP per capita (constant 2015 US$)`, fill = country)) +
+  geom_col() +
+  scale_fill_manual(values = "lightblue") +
+  labs(title = "Nicaragua's GDP over 20 years") +
+  labs(y = NULL, x = NULL) +
+  theme(legend.position = "none", panel.background = element_blank(), 
+        panel.grid.major.y = element_line(color = "lightgray"),  
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank())
+
+ggplotly(bar_chart)
+```
+
+# Conclusion
+
+This analysis underscores the pressing issue of limited sanitation in schools. The visualizations highlight the *disparity in sanitation infrastructure* globally, with Nicaragua facing significant challenges. Despite efforts by organizations like Sanitation and Water for All, **progress remains slow** due to socioeconomic barriers. Addressing these challenges is crucial for improving health outcomes and fostering sustainable development in Nicaragua and beyond.
+
+<img src="nicaragua.jpg" width="800" height="150">
